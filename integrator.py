@@ -15,6 +15,6 @@ def simulate(f, initial_state, control_trajectory, params, dt):
         control = control_trajectory[i]
         state = rk4_step(f, state, control, params, dt)
         # normalize quaternion
-        state[6:10] /= np.linalg.norm(state[6:10])
+        #state[6:10] /= np.linalg.norm(state[6:10])
         traj.append(state.copy())
     return np.array(traj)
