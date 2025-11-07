@@ -117,8 +117,18 @@ class PIDFlapController:
             'alpha_vane': alpha,     # for logging
             'h1': h1, 'h2': h2, 'h3': h3, 'h4': h4
         }
-
+'''
 import numpy as np
+import pandas as pd
+import os
+import sys 
+from pathlib import Path
+
+# Add the parent directory to Python path
+script_dir = Path(__file__).resolve().parent
+parent_dir = script_dir.parent  
+sys.path.append(str(parent_dir))
+
 import config
 
 class PIDFlapController:
@@ -279,7 +289,7 @@ class PIDFlapController:
         self.A_r = config.Ar
         self.d = config.d_int
         self.n = config.n
-        self.l = 0.1   # flap span
+        self.l = 0.4   # flap span
         self.c = 0.02  # flap chord
 
         # PID integrators
@@ -305,6 +315,7 @@ class PIDFlapController:
 
     def step(self, x=0, y=0, z=0, pitch=0, roll=0, yaw=0,
              x_ref=0, y_ref=0, z_ref=0, pitch_ref=0, roll_ref=0, yaw_ref=0):
+
         """
         Compute control input.
         Computes alpha_vane using aerodynamic lift to cancel yaw torque.
@@ -313,6 +324,7 @@ class PIDFlapController:
         # -------------------------------
         # Altitude PID
         # -------------------------------
+
         z_err = z_ref - z
         self.integral_z += z_err * self.dt
         derivative_z = (z_err - self.prev_z_err) / self.dt
@@ -324,6 +336,7 @@ class PIDFlapController:
         # -------------------------------
         # Pitch PID
         # -------------------------------
+
         pitch_err = pitch_ref - pitch
         self.integral_pitch += pitch_err * self.dt
         derivative_pitch = (pitch_err - self.prev_pitch_err) / self.dt
@@ -333,6 +346,7 @@ class PIDFlapController:
         # -------------------------------
         # Roll PID
         # -------------------------------
+
         roll_err = roll_ref - roll
         self.integral_roll += roll_err * self.dt
         derivative_roll = (roll_err - self.prev_roll_err) / self.dt
@@ -342,37 +356,54 @@ class PIDFlapController:
         # -------------------------------
         # Compute vane angle alpha to cancel tau_yaw
         # -------------------------------
+
         # Induced air velocity in vane channel
-        V = self.k_s * omega
+        V = self.k_s * omega  # k_s: velocity scaling factor
         q = 0.5 * self.rho * V**2  # dynamic pressure
 
-        # Solve tau_yaw = tau_rotor - tau_vane = 0 → find alpha
+        # Rotor torque
         tau_rotor = self.k_m * omega**2
-        if self.alpha_csv is not None:
-            # Function to compute tau_vane for a given alpha
-            def tau_vane_func(alpha):
-                Cl = np.interp(alpha, self.alpha_csv, self.Cl_csv)
-                S = self.l * self.c * self.n
-                return Cl * q * S * self.r
 
-            # Simple numerical root-finding (bisection)
-            alpha_min, alpha_max = -np.pi/6, np.pi/6  # ±30 deg
+        if self.alpha_csv is not None:
+            # Vane planform area
+            S = self.l * self.c * self.n
+
+            # Initialize alpha
             alpha_vane = 0.0
-            for _ in range(20):  # 20 iterations
-                tau_v = tau_vane_func(alpha_vane)
-                error = tau_rotor - tau_v
+
+            # Iterative solver to cancel tau_yaw
+            for _ in range(20):
+                # Update Cl from CSV for current alpha
+                Cl = np.interp(alpha_vane, self.alpha_csv, self.Cl_csv)
+
+                # Compute vane torque for current alpha
+                tau_vane = Cl * q * S * self.r
+
+                # Torque error
+                error = tau_rotor - tau_vane
+
+                # Check convergence
                 if abs(error) < 1e-6:
                     break
-                alpha_vane += np.clip(error/(q*S*self.r), -0.01, 0.01)  # step proportional to torque error
+
+                # Update alpha proportionally to torque error
+                alpha_vane += np.clip(error / (q * S * self.r), -0.01, 0.01)
+
+            # Final Cl for this alpha
+            Cl_final = np.interp(alpha_vane, self.alpha_csv, self.Cl_csv)
+
         else:
-            # fallback
+            # Fallback if CSV not available
             numerator = 2 * (self.k_m + self.rho * self.k_s**2 * self.A_r * self.d)
             denominator = self.n * self.rho * self.k_s**2 * self.A_r
             alpha_vane = numerator / denominator
 
-        # Compute resulting tau_yaw
-        tau_vane = np.interp(alpha_vane, self.alpha_csv, self.Cl_csv) * q * self.l * self.c * self.n * self.r if self.alpha_csv is not None else tau_rotor
-        tau_yaw = tau_rotor - tau_vane
+            # Use default Cl to match rotor torque
+            S = self.l * self.c * self.n
+            Cl_final = tau_rotor / (q * S * self.r)
+
+        # Compute resulting yaw torque
+        tau_yaw = tau_rotor - Cl_final * q * S * self.r
 
         # -------------------------------
         # Flap heights
@@ -395,3 +426,4 @@ class PIDFlapController:
             'alpha_vane': alpha_vane,
             'h1': h1, 'h2': h2, 'h3': h3, 'h4': h4
         }
+'''

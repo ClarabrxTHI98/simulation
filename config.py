@@ -10,17 +10,17 @@ Izz = 0.06 #just a rough estimate
 r_tot = 0.5 #total radius (r_t + r_m for now)
 g = 9.81
 kf = 1 #check for reasonable coefficients
-l= 0.1 #width of the flaps
+l= 0.01 #width of the flaps
 pi = 3.1415
 Ci = 2.0*pi*r_m #circumference pilz
 T = 0 # gravity force to compensate
 
 rho= 1.225 #Air density
-ks = 0.05 #Coeffient air velocity and rotor speed
+ks = 0.005 #Coeffient air velocity and rotor speed
 Ar = 0.27 #Area internal channel
 d_int = 0.15 #Internal channel radius + 1/2 blade length
 r = 0.1 #Distance between the pressure center (where the alift is applied) and the center of the internal channel for yaw compensator airfoils
-n = 4 # number of flaps in the ninternal channel
+n = 120 # number of flaps in the ninternal channel
 k_alpha = 2 #for now, no idea
 E = k_alpha*rho*ks*ks/2*Ar*n
 

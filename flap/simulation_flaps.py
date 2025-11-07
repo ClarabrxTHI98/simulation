@@ -43,15 +43,17 @@ state = np.zeros(12)
 
 # ------------------------------------------------------------
 # Controller Initialization
-# ------------------------------------------------------------
+vane_csv= str(script_dir / "airfoil_data" / "eppler_473_NCrit_9.csv")
+
 pid_controller = PIDFlapController(
-    Kp_pos=(0.010, 0.001, 15),
-    Ki_pos=(0.0, 0.0, 0.0),
-    Kd_pos=(0.0, 0.0, 0.0),
-    Kp_ang=(0.1, 0.1, 0.2),
-    Ki_ang=(0.0, 0.0, 0.0),
-    Kd_ang=(0.0, 0.0, 0.0),
-    Kp_yaw=0.0, Ki_yaw=0.0, Kd_yaw=0.0
+    (0.010, 0.001, 15),
+    (0.0, 0.0, 0.0),
+    (0.0, 0.0, 0.0),
+    (0.1, 0.1, 0.2),
+    (0.0, 0.0, 0.0),
+    (0.0, 0.0, 0.0),
+    0.0, 0.0, 0.0,
+    vane_csv_path=vane_csv
 )
 
 # ------------------------------------------------------------
@@ -62,6 +64,9 @@ traj[0] = state
 pitch_refs = np.zeros(N)
 roll_refs = np.zeros(N)
 z_refs = np.zeros(N)
+tau_yaw_vals = np.zeros(N)
+alpha_vane_vals = np.zeros(N)
+
 
 
 # ------------------------------------------------------------
@@ -75,11 +80,14 @@ for i in range(1, N):
     # Time-varying references
     # --------------------------------------------------------
 
-    pitch_refs[:] = 0.0
-
     # Roll reference step
     roll_ref = 0.1 if t[i] < duration / 2 else 0.0
     roll_refs[i] = roll_ref
+    
+
+    # Roll reference step
+    pitch_ref = 0.1 if t[i] < duration / 2 else 0.0
+    pitch_refs[i] = pitch_ref
 
     # Altitude step reference
     if t[i] < duration / 3:
@@ -103,7 +111,7 @@ for i in range(1, N):
     # --------------------------------------------------------
     pid_control = pid_controller.step(
         z=z, pitch=pitch, roll=roll, yaw=yaw,
-        z_ref=z_ref, pitch_ref=0.0,
+        z_ref=z_ref, pitch_ref=pitch_ref,
         roll_ref=roll_ref, yaw_ref=0.0
     )
 
@@ -113,13 +121,16 @@ for i in range(1, N):
     tau_roll = pid_control['tau_roll']
     tau_yaw = pid_control['tau_yaw']
     alpha_vane = pid_control['alpha_vane']
+    tau_yaw_vals[i] = tau_yaw
+    alpha_vane_vals[i] = alpha_vane
+
    
     # --------------------------------------------------------
     # Debug every 0.5s
     # --------------------------------------------------------
     if i % int(0.5 / dt) == 0:
         print(
-            f"t={t[i]:.2f}s | z={z:.2f} | z_ref={z_ref:.2f} | roll_ref={roll_ref:.2f}\n"
+            f"t={t[i]:.2f}s | z={z:.2f} | z_ref={z_ref:.2f} | pitch_ref={pitch_ref:.2f}\n"
             f"   T={T:.3f} | omega={omega:.3f}  "
             f"tau_yaw={tau_yaw:.5e}\n"
         )
@@ -158,6 +169,39 @@ plt.title("Altitude Tracking")
 plt.xlabel("Time [s]")
 plt.ylabel("Z [m]")
 plt.legend(); plt.grid(True); hold_plot()
+
+plt.figure()
+plt.plot(t, x_vals, label="X")
+plt.title("Horizontal Tracking")
+plt.xlabel("Time [s]")
+plt.ylabel("X [m]")
+plt.legend(); plt.grid(True); hold_plot()
+
+plt.figure()
+plt.plot(t, y_vals, label="Y")
+plt.title("Horizontal Tracking Y")
+plt.xlabel("Time [s]")
+plt.ylabel("Y [m]")
+plt.legend(); plt.grid(True); hold_plot()
+
+plt.figure()
+plt.plot(t, tau_yaw_vals, label="Tau Yaw")
+plt.title("Yaw Torque Command")
+plt.xlabel("Time [s]")
+plt.ylabel("τ_yaw [Nm]")
+plt.legend()
+plt.grid(True)
+hold_plot()
+
+plt.figure()
+plt.plot(t, alpha_vane_vals, label="Alpha Vane")
+plt.title("Vane Angle Over Time")
+plt.xlabel("Time [s]")
+plt.ylabel("Alpha [rad]")
+plt.legend()
+plt.grid(True)
+hold_plot()
+
 
 plt.figure()
 plt.plot(t, roll_vals, label="Roll")
@@ -214,6 +258,12 @@ body_id = p.createMultiBody(
     baseOrientation=orientation_fix
 )
 
+# Before the loop — create the axes once and store their IDs
+axis_len = 0.1
+x_axis_id = p.addUserDebugLine([0, 0, 0], [axis_len, 0, 0], [1, 0, 0], lineWidth=3)
+y_axis_id = p.addUserDebugLine([0, 0, 0], [0, axis_len, 0], [0, 1, 0], lineWidth=3)
+z_axis_id = p.addUserDebugLine([0, 0, 0], [0, 0, axis_len], [0, 0, 1], lineWidth=3)
+
 print("Starting 3D animation...")
 for i in range(0, N, 6):
     pos = [float(x_vals[i]), float(y_vals[i]), float(z_vals[i])]
@@ -221,7 +271,7 @@ for i in range(0, N, 6):
     quat = R.from_euler('xyz', [roll, pitch, yaw]).as_quat()
 
     def quat_multiply(q1, q2):
-        x1, y1, z1, w1 = q1
+        x1, y1, z1, w1 = q1 
         x2, y2, z2, w2 = q2
         return [
             w1*x2 + x1*w2 + y1*z2 - z1*y2,
@@ -232,7 +282,48 @@ for i in range(0, N, 6):
 
     q_total = quat_multiply(quat, orientation_fix)
     p.resetBasePositionAndOrientation(body_id, pos, q_total)
-    time.sleep(dt * 30)
+
+    '''
+
+    # --- Camera control (put here) ---
+    if i < N / 3:
+        # Side view
+        p.resetDebugVisualizerCamera(1.0, 90, -20, [0, 0, 0])
+    elif i < 2 * N / 3:
+        # Top view
+        p.resetDebugVisualizerCamera(1.0, 0, -89, [0, 0, 0])
+    else:
+        # Follow camera (moves with the body)
+        p.resetDebugVisualizerCamera(0.5, 0, -30, pos)
+    # -------------------------------
+
+    '''
+
+    # Body frame unit vectors in local frame
+    x_axis_local = [axis_len, 0, 0]
+    y_axis_local = [0, axis_len, 0]
+    z_axis_local = [0, 0, axis_len]
+
+    # Transform local axes to world frame using the current body orientation
+    x_axis_world, _ = p.multiplyTransforms(pos, q_total, x_axis_local, [0, 0, 0, 1])
+    y_axis_world, _ = p.multiplyTransforms(pos, q_total, y_axis_local, [0, 0, 0, 1])
+    z_axis_world, _ = p.multiplyTransforms(pos, q_total, z_axis_local, [0, 0, 0, 1])
+
+    # Update the same debug lines
+    p.addUserDebugLine(pos, x_axis_world, [1, 0, 0], lineWidth=400, replaceItemUniqueId=x_axis_id)
+    p.addUserDebugLine(pos, y_axis_world, [0, 1, 0], lineWidth=400, replaceItemUniqueId=y_axis_id)
+    p.addUserDebugLine(pos, z_axis_world, [0, 0, 1], lineWidth=400, replaceItemUniqueId=z_axis_id)
+
+    '''
+    # --- Cameras ---
+    view_static = p.computeViewMatrixFromYawPitchRoll([0, 0, 0.5], 2, 90, -30, 0, 2) #check better this function doc
+    view_follow = p.computeViewMatrixFromYawPitchRoll(pos, 0.3, 0, -20, 0, 2) 
+    proj = p.computeProjectionMatrixFOV(60, 1, 0.1, 100) 
+    img_static = p.getCameraImage(640, 480, view_static, proj) 
+    img_follow = p.getCameraImage(640, 480, view_follow, proj)
+    '''
+
+    time.sleep(dt * 10)
 
 print("Simulation finished.")
 while True:
