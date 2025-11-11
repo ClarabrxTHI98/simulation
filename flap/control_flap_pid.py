@@ -250,6 +250,7 @@ class PIDFlapController:
             'alpha_vane': alpha,  # computed automatically
             'h1': h1, 'h2': h2, 'h3': h3, 'h4': h4
         }
+'''
 
 import numpy as np
 import pandas as pd
@@ -402,6 +403,7 @@ class PIDFlapController:
             Cl_final = tau_rotor / (q * S * self.r)
 
         # Compute resulting yaw torque
+        tau_yaw_flap = Cl_final * q * S * self.r
         tau_yaw = tau_rotor - Cl_final * q * S * self.r
 
         # -------------------------------
@@ -420,6 +422,7 @@ class PIDFlapController:
             'T': T,
             'tau_pitch': tau_pitch,
             'tau_roll': tau_roll,
+            'tau_yaw_flap': tau_yaw_flap,
             'tau_yaw': tau_yaw,
             'omega': omega,
             'alpha_vane': alpha_vane,
@@ -545,3 +548,4 @@ class PIDFlapControllerCoaxial:
             'omega_bottom': omega_bottom,
             'h1': h1, 'h2': h2, 'h3': h3, 'h4': h4
         }
+'''

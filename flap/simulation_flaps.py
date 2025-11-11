@@ -55,7 +55,6 @@ pid_controller = PIDFlapController(
     0.0, 0.0, 0.0,
     vane_csv_path=vane_csv
 )
-
 # ------------------------------------------------------------
 # Storage
 # ------------------------------------------------------------
@@ -64,6 +63,8 @@ traj[0] = state
 pitch_refs = np.zeros(N)
 roll_refs = np.zeros(N)
 z_refs = np.zeros(N)
+T_val = np.zeros(N)
+omega_vals = np.zeros(N)
 tau_yaw_vals = np.zeros(N)
 alpha_vane_vals = np.zeros(N)
 
@@ -121,8 +122,10 @@ for i in range(1, N):
     tau_roll = pid_control['tau_roll']
     tau_yaw = pid_control['tau_yaw']
     alpha_vane = pid_control['alpha_vane']
+    T_val[i] = T
     tau_yaw_vals[i] = tau_yaw
     alpha_vane_vals[i] = alpha_vane
+    omega_vals[i] = omega
 
    
     # --------------------------------------------------------
@@ -194,6 +197,24 @@ plt.grid(True)
 hold_plot()
 
 plt.figure()
+plt.plot(t, omega_vals, label="Omega")
+plt.title("omega")
+plt.xlabel("Time [s]")
+plt.ylabel("omega [rads]")
+plt.legend()
+plt.grid(True)
+hold_plot()
+
+plt.figure()
+plt.plot(t, T_val, label="Thrust")
+plt.title("Thrust")
+plt.xlabel("Time [s]")
+plt.ylabel("T [N]")
+plt.legend()
+plt.grid(True)
+hold_plot()
+
+plt.figure()
 plt.plot(t, alpha_vane_vals, label="Alpha Vane")
 plt.title("Vane Angle Over Time")
 plt.xlabel("Time [s]")
@@ -201,7 +222,6 @@ plt.ylabel("Alpha [rad]")
 plt.legend()
 plt.grid(True)
 hold_plot()
-
 
 plt.figure()
 plt.plot(t, roll_vals, label="Roll")
