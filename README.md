@@ -7,14 +7,15 @@ All relevant scripts are located inside the `flaps` directory.
 ---
 
 ## Repository Structure
- flaps/
-  |-- simulation_flaps.py
-  |-- simulation_flaps_ramp.py
-  |-- simulation_flaps_double.py
-  |-- control_flap_pid.py
-  |-- control_flap_pid_ideal.py
-  |-- airfoil_data/
-  |-- plots/   (auto-generated)
+
+flaps/
+ ├── simulation_flaps.py
+ ├── simulation_flaps_ramp.py
+ ├── simulation_flaps_double.py
+ ├── control_flap_pid.py
+ ├── control_flap_pid_ideal.py
+ ├── airfoil_data/
+ └── plots/   (auto-generated)
 
 
 - **`flaps/`** — Main simulation code and all controller implementations  
