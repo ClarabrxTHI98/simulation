@@ -8,7 +8,7 @@ All relevant scripts are located inside the `flaps` directory.
 
 ## Repository Structure
 
-flaps/
+flaps/  
  ├── simulation_flaps.py  
  ├── simulation_flaps_ramp.py  
  ├── simulation_flaps_double.py  
