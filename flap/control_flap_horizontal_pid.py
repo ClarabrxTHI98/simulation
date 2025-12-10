@@ -52,6 +52,7 @@ class PIDFlapController:
 
     def step(self, x=0, y=0, z=0, pitch=0, roll=0, yaw=0,
              x_ref=0, y_ref=0, z_ref=0, pitch_ref=0, roll_ref=0, yaw_ref=0):
+
         """
         Compute control input (thrust + torques) for the flap system.
         Each flap is assumed to influence roll, pitch, and yaw simultaneously.
@@ -60,6 +61,7 @@ class PIDFlapController:
         # -------------------------------
         # Altitude PID
         # -------------------------------
+        
         z_err = z_ref - z
         self.integral_z += z_err * self.dt
         derivative_z = (z_err - self.prev_z_err) / self.dt
