@@ -26,7 +26,7 @@ E = k_alpha*rho*ks*ks/2*Ar*n
 
 wind_enabled = False
 wind_velocity = [0.0, 0.0, 0.0]
-k_T = 1e-3     # thrust coefficient [N·s²] RANDOM
+k_T = 4.15e-5  # thrust coefficient [N·s²] 
 k_Q = 1e-4      # torque coefficient [N·m·s²] RANDOM
 
 # Simulation
